@@ -1,0 +1,69 @@
+SELECT TOP 10 * FROM OrtelTE.dbo.COB_1752_Screen1 WHERE COB_ID = 'DE236'
+
+SELECT TOP 10 * FROM OrtelTE.dbo.COB_AWDM_Screen WHERE Batch='9033220'
+
+
+SELECT TOP 10 * FROM OrtelTE.dbo.Catv_QAM Where BoardNo = 'BFG1908'
+
+SELECT TOP 10 * FROM OrtelTE.dbo.COB_AWDM_Screen
+
+/* COB Tables */
+SELECT TOP 10 * FROM OrtelTE.dbo.COB_1752_Screen1 WHERE Batch='5836220' /*(COB_ID)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.COB_1752_Screen WHERE Batch='5836220' /*(COB_ID)*/
+/*batch exists*/SELECT TOP 10 * FROM OrtelTE.dbo.LIDataBase WHERE Batch='5836220' /*(ChipID)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.LIDataBase1 WHERE Batch='5836220' /*(ChipID)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.BlockDistortion WHERE Batch='5836220' /*(Chip)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.COB_AWDM_Screen WHERE Batch='5836220' /*(COB_ID)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.COB_AWDM_Screen1 WHERE Batch='5836220' /*(COB_ID)*/
+/*batch exists/connect*/SELECT TOP 10 * FROM OrtelTE.dbo.ChirpSpecTrumData WHERE Batch='5836220' /*(Chip)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.ChirpSpecTrumData1 WHERE Batch='5836220' /*(Chip)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.BlockRTFData WHERE Batch='5836220' /*(Chip)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.BlockDistortion WHERE Batch='5836220' /*(Chip)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.BlockDistortion_WDM WHERE Batch='5836220' /*(Chip)*/
+SELECT TOP 10 * FROM OrtelTE.dbo.LIDataBaseEML WHERE Batch='5836220' /*(ChipID)*/
+SELECT TOP 10 * FROM OrtelTE_US.dbo.LIDataBase WHERE Batch='5836220'
+
+/* LM Tables */
+SELECT TOP 10 * FROM OrtelTE.dbo.AWDM_Module_TDS_Table WHERE SerialNumber = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.TecTestData WHERE SN = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.ENVR_Data WHERE SN = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.Module_QAM WHERE LaserSerNo = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.LM_SMSR WHERE LaserSerNo = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.SingleModuleLIP /* no identifier? WHERE */ = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.BlockRTFData /* should be COB? WHERE */ = 'BFC5265'
+/*connect*/ SELECT TOP 10 * FROM OrtelTE.dbo.ModuleFailSMSR WHERE Device_SN = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.ADS_CAP_Data WHERE DEVICE_SN = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.Splice_1752 WHERE SerialNum = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.ADS_Lens_Data WHERE SN = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.AWDM1550LIPDB WHERE SerNo = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.Module_FreqResp WHERE SerNo = 'BFC5265'
+/*connect*/ SELECT TOP 10 * FROM OrtelTE.dbo.ModuleDistortion WHERE Device_SN = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.LaserModuleShippingData WHERE Device_SN = 'BFC5265'
+SELECT TOP 10 * FROM OrtelTE.dbo.LMLIP_EML WHERE SerNo = 'BFC5265'
+
+SELECT TOP 10 * FROM OrtelTE_US.dbo.SingleModuleLIP
+SELECT TOP 10 * FROM OrtelTE_US.dbo.ModuleDistortion
+
+/* Bar Tables */
+/* Shows collection of chip bars, might be useful in correlating a chip based on other units in its bar */
+SELECT TOP 10 * FROM OrtelTE_Archive.dbo.BarData
+SELECT TOP 10 * FROM OrtelTE_US.dbo.BarData
+
+
+
+/* COB Table Data */
+SELECT TOP 10 * FROM OrtelTE.dbo.ChirpSpecTrumData WHERE Batch='5836220' AND CHIP='CO122'
+	- 12: TestTemp
+	- 23: PredictChannel
+	- 27: SMSR
+	- 31: Chirp
+
+
+SELECT TOP 10 * FROM OrtelTE.dbo.LIDataBase WHERE Batch='5836220'
+	- 13: Ith
+	- 14: Power
+	- 15: Efficiency
+	- 26: WL
+
+
+/* LM COB joins */

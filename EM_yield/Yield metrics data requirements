@@ -1,0 +1,23 @@
+Yield metrics
+	* Analysis of historical order quantities
+	* Connection of COB test data and LM test data
+		- explore any correlations between key pieces of data
+	* Scoring systems of LM
+
+Ultimate value of LM units in storage depends on scoring and order
+	* Scoring can also be considered a function of time in storage (inverse correlation)
+	* Scoring can also be calculated as a function of the likelihood for passing tests of next stage compared against correlated/predicted scores
+		- Requires ML to determine correlations for key test metrics
+		- Requires comparison against either specs or another layer of ML to see pass rates
+
+Final yield calculation is a function of change in sum of units in inventory over time
+
+
+Importing scoring test data metrics
+	- Bermer
+	- SMSR
+	- Optical Power
+	- ITH
+	- Chirp
+	- SE
+	
