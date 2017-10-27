@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from datetime import datetime as dt
 
 # ----------------------------------------
 # LM to COB data correlations
@@ -110,3 +110,31 @@ merged_df = pd.merge(link_df, lm_tds_df, how='inner', on='Device_SN')
 
 X, y = prepare_data(merged_df, 'SMSR (dB)')
 
+#%%
+# --------------------
+# DeltaDates
+# --------------------
+# Calculate the time between LM and COB tests to see how long the 'selection 
+# time' for a given COB was, labelled as "DeltaDate" in the dataframe
+
+#%%
+df = pd.read_csv('LM_COB_data.csv')
+
+df = df.dropna()
+df = df.reset_index()
+
+#%%
+def delta_date( row ):
+    lm_date = dt.strptime(row['Date'], '%Y-%m-%d %H:%M:%S')
+    cob_date = dt.strptime(row['Timestamp'], '%Y-%m-%d %H:%M:%S')
+    delta = pd.Series([(lm_date - cob_date).days])
+    globals()['delta_date_col'] = globals()['delta_date_col'].append(delta)
+    
+
+delta_date_col = pd.Series()
+df.apply(delta_date, axis=1)
+delta_date_col = delta_date_col.reset_index()
+delta_date_col = delta_date_col.drop('index', axis=1)
+delta_date_col.columns = ['DeltaDate']
+
+df['DeltaDate'] = delta_date_col['DeltaDate']
