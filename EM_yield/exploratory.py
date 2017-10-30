@@ -138,3 +138,4 @@ delta_date_col = delta_date_col.drop('index', axis=1)
 delta_date_col.columns = ['DeltaDate']
 
 df['DeltaDate'] = delta_date_col['DeltaDate']
+
