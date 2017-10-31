@@ -67,3 +67,15 @@ SELECT TOP 10 * FROM OrtelTE.dbo.LIDataBase WHERE Batch='5836220'
 
 
 /* LM COB joins */
+
+
+/* LM Test Data */
+SELECT TOP 10 * FROM OrtelTE.dbo.ModuleFailSMSR WHERE Device_SN = 'BFC5265'
+	- 11: WaveLen
+	- 12: SMSR
+	- 13: Ith
+	- 14: Slopeff
+	- 15: Temperature
+
+SELECT TOP 10 * FROM OrtelTE.dbo.LaserModuleShippingData WHERE Device_SN = 'BFC5265'
+	- 16: Chirp

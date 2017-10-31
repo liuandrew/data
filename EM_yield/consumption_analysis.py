@@ -57,6 +57,8 @@ def monthly_consumption( df ):
       for year in years:
           plt.plot(years[year]['Month'], years[year][channel])        
           
+# Generate plots for rolling average consumptions of lasers of a given type
+# with a given window (number of months to be averaged)
 def rolling_average( df, window ):
   rolling = pd.rolling_mean(df, window=window)
   channels = df.columns[1:]
@@ -68,6 +70,18 @@ def rolling_average( df, window ):
     rolling[channel].plot(kind='line')
     plt.title('Channel: {}'.format(channel))
   plt.savefig('Figures\\Rolling_Average_Monthly_Laser_Consumption.png')
+
+# Generate plots for histograms of each channel
+def channel_histograms( df ):
+  channels = df.columns[1:]
+  fig = plt.figure(figsize=(15, 12))
+
+  for idx, channel in enumerate(channels):
+    ax = plt.subplot(8, 6, idx+1)
+    plt.tight_layout()
+    plt.hist(df[channel])
+    plt.title('Channel: {}'.format(channel))
+  plt.savefig('Figures\\Monthly_Laser_Consumption_Histograms.png')
 #%%
 #Correlate previous month with next month
 prevnext = pd.DataFrame(columns=['prev', 'next'])

@@ -8,16 +8,7 @@ from datetime import datetime as dt
 # LM to COB data correlations
 # ----------------------------------------
 
-#%%
-# Load Data
-link_df = pd.read_csv('LM_COB_link.csv')
-cob_df = pd.read_csv('COB_data.csv')
-lm_tds_df = pd.read_csv('Test Data Sheet for 1752A-C21 Shipped Units.csv')
 
-# Link COB data to LM serials
-link_df = pd.merge(link_df, cob_df, how='inner', on=['Batch', 'Chip'])
-link_df['Device_SN'] = link_df['SN']
-link_df = link_df.drop('SN', axis=1)
 
 #%%
 # ------------------------------
@@ -106,9 +97,18 @@ def prepare_data(df, column):
 # end function
 
 #%%
-merged_df = pd.merge(link_df, lm_tds_df, how='inner', on='Device_SN')
+# Load Data
+link_df = pd.read_csv('LM_COB_link.csv')
+cob_df = pd.read_csv('COB_data.csv')
+lm_tds_df = pd.read_csv('Test Data Sheet for 1752A-C21 Shipped Units.csv')
+lm_tds_df = lm_tds_df.drop('Unnamed: 19', axis=1)
+# Link COB data to LM serials
+link_df = pd.merge(link_df, cob_df, how='inner', on=['Batch', 'Chip'])
+link_df['Device_SN'] = link_df['SN']
+link_df = link_df.drop('SN', axis=1)
 
-X, y = prepare_data(merged_df, 'SMSR (dB)')
+# link_df = suffix_cob_headers(link_df)
+merged_df = pd.merge(link_df, lm_tds_df, how='inner', on='Device_SN')
 
 #%%
 # --------------------
@@ -138,4 +138,118 @@ delta_date_col = delta_date_col.drop('index', axis=1)
 delta_date_col.columns = ['DeltaDate']
 
 df['DeltaDate'] = delta_date_col['DeltaDate']
+delta_date_df = df.drop('Unnamed: 0', axis=1)
+
+
+#%%
+# ---------------------
+# Plot graphs
+# ---------------------
+
+cob_columns = ['Ith', 'Power', 'Efficiency',
+       'WL', 'KinkValue', 'TestTemp', 'RFTestFreq', 'PredictChannel', 'SMSR',
+       'Chirp', 'LISlope']
+
+# These columns are either normally distributed or generally
+# thought to be useful (i.e. SMSR), check histograms to see
+cob_useful_columns = ['Ith', 'Power', 'Efficiency', 'SMSR', 
+       'KinkValue', 'Chirp', 'LISlope']
+
+# Remove outliers
+# Drops to about 6k entries from 10k
+for col in cob_useful_columns:
+    delta_date_df = filter_quantiles(delta_date_df, col, 0.01, 0.99)
+    merged_df = filter_quantiles(merged_df, col, 0.01, 0.99)
+
+#%%
+# Histograms for COB test data, just to see general distributions
+fig = plt.figure(figsize=(15, 12))
+for idx, col in enumerate(cob_columns):
+    ax = plt.subplot(3, 4, idx+1)
+    plt.tight_layout()
+    plt.hist(delta_date_df[col])
+    plt.title(col)
+plt.savefig('Figures\\COB_Test_Data_Histograms.png')
+#%%
+# Histograms for 'useful columns', after removing outliers of <0.01, or >0.99
+fig = plt.figure(figsize=(15, 8))
+for idx, col in enumerate(cob_useful_columns):
+    ax = plt.subplot(2, 4, idx+1)
+    plt.tight_layout()
+    plt.hist(delta_date_df[col])
+    plt.title(col)
+plt.savefig('Figures\\COB_Test_Data_Histograms_Removed_Outliers_Normal.png')
+
+#%%
+# -------------------
+# Delta Date correlations
+# -------------------
+
+fig = plt.figure(figsize=(15, 8))
+for idx, col in enumerate(cob_useful_columns):
+    ax = plt.subplot(2, 4, idx+1)
+    plt.tight_layout()
+    plt.scatter(delta_date_df.head(1000)[col], delta_date_df.head(1000)['DeltaDate'])
+    plt.title(col)
+plt.savefig('Figures\\Test_Data_Versus_Delta_Date_First_1000.png')
+
+#%%
+# Histogram for Delta Dates
+fig = plt.figure(figsize=(15, 6))
+plt.hist(delta_date_df['DeltaDate'])
+plt.title('Histograms for COB Time Spent in Inventory')
+plt.savefig('Figures\\Delta_Date_Histogram.png')
+
+fig = plt.figure(figsize=(15, 6))
+plt.hist(delta_date_df['DeltaDate'], bins=30)
+plt.title('Histograms for COB Time Spent in Inventory')
+plt.savefig('Figures\\Delta_Date_Histogram_30_bins.png')
+
+#%%
+# -------------------------
+# Test Data Correlations
+# -------------------------
+
+def plot_test_data_correlations( target_column ):
+    fig = plt.figure(figsize=(15, 8))
+    for idx, col in enumerate(cob_useful_columns):
+        ax = plt.subplot(2, 4, idx+1)
+        plt.tight_layout()
+        plt.scatter(merged_df[col], merged_df[target_column])
+        plt.title(col)
+    save_name = target_column.replace('/', '-')
+    plt.savefig('Figures\\COB_correlations\\COB_Test_Data_Correlation_With_{}.png'.format( 
+        save_name ) )
+    
+
+def plot_test_data_correlations_sparse( target_column ):
+    fig = plt.figure(figsize=(15, 8))
+    for idx, col in enumerate(cob_useful_columns):
+        ax = plt.subplot(2, 4, idx+1)
+        plt.tight_layout()
+        plt.scatter(merged_df.head(1000)[col], merged_df.head(1000)[target_column])
+        plt.title(col)
+    save_name = target_column.replace('/', '-')
+    plt.savefig('Figures\\COB_correlations\\COB_Test_Data_Correlation_With_{}_First_1000.png'.format( 
+        save_name ) )
+    
+#%%
+# Run above two functions for each LM Test result
+lm_columns = ['Iop (mA)', 'Ith (mA)', 'Laser Temperature (Top) (C)',
+       'Slope Efficiency (mW/mA)', 'Optical Power (mW)', 'SMSR (dB)',
+       'Tracking Error_MIN (dB)', 'Tracking Error_MAX (dB)',
+       'Thermistor Resistance (Rth) (K-Ohm)', 'B Consttant (K)',
+       'CNR @ 61.25 MHz (dB)', 'CNR @ 547.25 MHz (dB)', 'CSO (dB)', 'CTB (dB)',
+       'Chirp (MHz/mW)', 'Monitor Current (micro-A)',
+       'Frequency Response (dB)']
+
+for col in lm_columns:
+    plot_test_data_correlations(col)
+    plot_test_data_correlations_sparse(col)
+    
+#%%
+# Listed are potential columns that show hints of correlations between
+# LM and COB test data
+potential_lm_columns = ['Iop (mA)', 'Ith (mA)', 'Monitor Current (micro-A)', 
+                        'Slope Efficiency (mW/mA)', 'SMSR (dB)' ]
 
