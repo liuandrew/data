@@ -105,3 +105,17 @@ plt.title('Comparison of previous month consumption with current')
 plt.savefig('Figures\\Comparison_of_Previous_and_Next_Month_Laser_Consumption.png')
 #Largely unhelpful
 
+#%%
+rolling = pd.rolling_mean(df, window=3)
+channels = df.columns[1:]
+fig = plt.figure(figsize=(15, 12))
+highlight_channels = ['20', '21', '22', '24', '26', '28', '29', '33', '39']
+for idx, channel in enumerate(channels):
+  ax = plt.subplot(8, 6, idx+1)
+  plt.tight_layout()
+  if(channel in highlight_channels):
+    rolling[channel].plot(kind='line', color='r')
+  else:
+    rolling[channel].plot(kind='line')
+  plt.title('Channel: {}'.format(channel))
+plt.savefig('Figures\\Rolling_Average_Monthly_Laser_Consumption_Highlights.png')
