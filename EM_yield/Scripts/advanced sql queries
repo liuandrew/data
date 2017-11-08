@@ -1,0 +1,77 @@
+# ---------------
+# DeltaDate distributions
+# ---------------
+
+SELECT TOP 1 C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp, (Laser.MaxDate - C.Timestamp) as DeltaDate
+  FROM OrtelTE.dbo.ChirpSpecTrumData AS C 
+    INNER JOIN (  
+      SELECT Batch, Chip, max(Timestamp) as MaxDate  
+      FROM OrtelTe.dbo.ChirpSpecTrumData 
+      GROUP BY Batch, Chip  
+    ) AS CMaxDate  
+      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  
+	INNER JOIN (
+		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate
+		FROM OrtelTE.dbo.ModuleDistortion
+		GROUP BY Device_SN, BatchNo, ChipNo
+	) AS Laser
+	ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo
+	ORDER BY C.RecordId DESC
+
+
+# Get delta date between tests
+	SELECT TOP 1 C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp, DateDiff(d, C.Timestamp, Laser.MaxDate) as DeltaDate
+  FROM OrtelTE.dbo.ChirpSpecTrumData AS C 
+    INNER JOIN (  
+      SELECT Batch, Chip, max(Timestamp) as MaxDate  
+      FROM OrtelTe.dbo.ChirpSpecTrumData 
+      GROUP BY Batch, Chip  
+    ) AS CMaxDate  
+      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  
+	INNER JOIN (
+		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate
+		FROM OrtelTE.dbo.ModuleDistortion
+		GROUP BY Device_SN, BatchNo, ChipNo
+	) AS Laser
+	ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo
+	ORDER BY C.RecordId DESC
+
+# Histogram date between tests, ignoring Batch='1', Chip='1', because that seems to be
+# a recurring test unit that leads to lots of negative values 
+SELECT (floor(DateDiff(d, C.Timestamp, Laser.MaxDate) / 10.00) * 10) as DeltaDate, COUNT(*) as Count
+  FROM OrtelTE.dbo.ChirpSpecTrumData AS C 
+    INNER JOIN (  
+      SELECT Batch, Chip, max(Timestamp) as MaxDate  
+      FROM OrtelTe.dbo.ChirpSpecTrumData 
+      GROUP BY Batch, Chip  
+    ) AS CMaxDate  
+      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  
+	INNER JOIN (
+		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate
+		FROM OrtelTE.dbo.ModuleDistortion
+		GROUP BY Device_SN, BatchNo, ChipNo
+	) AS Laser
+	ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo
+	WHERE C.Batch != '1' AND C.Chip != '1'
+	GROUP BY (floor(DateDiff(d, C.Timestamp, Laser.MaxDate) / 10.00) * 10)
+	ORDER BY (floor(DateDiff(d, C.Timestamp, Laser.MaxDate) / 10.00) * 10)
+
+# Histogram date between chip test date and today's date where chip is not found
+# in laser sql table, i.e. chip has not been selected
+	SELECT (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10) as DeltaDate, COUNT(*) as Count
+  FROM OrtelTE.dbo.ChirpSpecTrumData AS C 
+    INNER JOIN (  
+      SELECT Batch, Chip, max(Timestamp) as MaxDate  
+      FROM OrtelTe.dbo.ChirpSpecTrumData 
+      GROUP BY Batch, Chip  
+    ) AS CMaxDate  
+      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  
+	LEFT JOIN (
+		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate
+		FROM OrtelTE.dbo.ModuleDistortion
+		GROUP BY Device_SN, BatchNo, ChipNo
+	) AS Laser
+	ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo
+	WHERE C.Batch != '1' AND C.Chip != '1' AND Laser.Device_SN IS NULL
+	GROUP BY (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10)
+	ORDER BY (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10)

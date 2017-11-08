@@ -4,6 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime as dt
 
+from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import GridSearchCV
+
 # ----------------------------------------
 # LM to COB data correlations
 # ----------------------------------------
@@ -253,3 +256,67 @@ for col in lm_columns:
 potential_lm_columns = ['Iop (mA)', 'Ith (mA)', 'Monitor Current (micro-A)', 
                         'Slope Efficiency (mW/mA)', 'SMSR (dB)' ]
 
+#%%
+# -------------------
+# Density modeling for Time Spent in Inventory
+# -------------------
+
+kde = KernelDensity(kernel='gaussian', bandwidth = 9.0)
+kde.fit(delta_date_col)
+
+X_plot = np.linspace(0, 400, 3001)[:, np.newaxis]
+log_dens = kde.score_samples(X_plot)
+
+fig, ax = plt.subplots(figsize=(15, 6))
+ax.plot(X_plot[:, 0], np.exp(log_dens), '-', label='Gaussian Kernel')
+
+plt.show()
+
+#%%
+# Grid search for bandwidth
+bandwidths = np.linspace(8.5, 9.5, 10)
+grid = GridSearchCV(kde, {'bandwidth': bandwidths}, cv=7, verbose=10)
+# grid.fit(delta_date_col)
+
+# print(grid.best_params_)
+
+# Grid search bandwidth revealed 9.0 as best param
+
+#%%
+# Example calculation to estimate expected time to be used
+def estimate_date(kde, X):
+  """
+  (single value first): pass a value to get expected time to future use
+  Using 500 as max days
+  Using 2000 as iterative step
+  Params:
+    kde -> trained Kernel Density Estimator
+    X -> array or series of dates to use
+  """
+  X_range = np.linspace(0, 2000, 2001)[:, np.newaxis]
+  log_dens = kde.score_samples(X_range)
+  dens = np.exp(log_dens)[:, np.newaxis]
+  upper_range = X_range > X
+  # Calculate the expected value for distribution above day X
+  return sum(dens[upper_range] * X_range[upper_range]) / sum(dens[upper_range])
+  
+
+"""
+Determine summing error for distribution. Using 1000 steps as accurate,
+500 steps has a ~0.5% error
+Beyond 500 days expected value seems to drop, which is odd
+
+for i in 200 * np.linspace(1, 2.5, 20):
+  print(i)
+  X_plot = np.linspace(200, i, 500)[:, np.newaxis]
+  log_dens = kde.score_samples(X_plot)
+  dens = np.exp(log_dens)[:, np.newaxis]  
+  print(sum(dens * X_plot) / sum(dens))
+
+for i in 10 ** np.linspace(1, 3, 20):
+  print(i)
+  X_plot = np.linspace(200, 500, i)[:, np.newaxis]
+  log_dens = kde.score_samples(X_plot)
+  dens = np.exp(log_dens)[:, np.newaxis]  
+  print(sum(dens * X_plot) / sum(dens))
+"""
