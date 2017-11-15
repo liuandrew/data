@@ -13,6 +13,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os.path
 
+from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import GridSearchCV
+
 # Connect to SQL
 sql = DatabaseManagerSQL()
 
@@ -120,3 +123,67 @@ fig = plt.figure(figsize=(15, 6))
 plt.hist(df4['DeltaDate'], bins=int(df4['DeltaDate'].max()/10) )
 plt.title('Histogram of Time Taken for COB to be Selected')
 plt.savefig('Figures\\Histogram_All_COBs_Selected.png')
+
+
+#%%
+# ------------------
+# KDE Analysis
+# ------------------
+
+matched = pd.read_csv('../Data/Delta_Dates_Matched.csv')
+unmatched = pd.read_csv('../Data/Delta_Dates_Unmatched.csv')
+
+matched.drop('Unnamed: 0', axis=1, inplace=True)
+unmatched.drop('Unnamed: 0', axis=1, inplace=True)
+
+matched_kde = KernelDensity(kernel='gaussian', bandwidth = 9.0)
+matched_kde.fit(matched)
+unmatched_kde = KernelDensity(kernel='gaussian', bandwidth = 9.0)
+unmatched_kde.fit(unmatched)
+
+#%%
+
+X_plot = pd.DataFrame(np.arange(0, 601, 1))
+matched_log_dens = matched_kde.score_samples(X_plot)
+matched_probabilities = np.exp(matched_log_dens)
+unmatched_log_dens = unmatched_kde.score_samples(X_plot)
+unmatched_probabilities = np.exp(unmatched_log_dens)
+
+fig, ax = plt.subplots(figsize=(15, 10), nrows=2)
+ax[0].plot(X_plot.loc[:, 0], matched_probabilities, '-', label='Gaussian Kernel (Matched)')
+ax[1].plot(X_plot.loc[:, 0], unmatched_probabilities, '-', label='Gaussian Kernel (Unmatched)')
+plt.show()
+
+def chance_of_pick( day ):
+  '''
+  Pass a number of days unit has been in inventory
+  Returns expected chance of being picked as decimal according to kde
+  Intuitively seems incorrect, as at 600 days probability ~25%
+  '''
+  m = matched_probabilities[:day].sum() * matched.count()
+  un = unmatched_probabilities[:day].sum() * unmatched.count()
+  probability = m / (m + un)
+  return probability
+
+#%%
+def counted_chance_of_pick( day ):
+  '''
+  Calculate chance of picked by num units beyond matched/unmatched
+  '''
+  greater_matched = matched[matched['DeltaDate'] > day].count()
+  greater_unmatched = unmatched[unmatched['DeltaDate'] > day].count()
+  probability = greater_matched / ( greater_matched + greater_unmatched )
+  return probability
+
+counted_probabilities = np.array([])
+for i in range(601):
+  counted_probabilities = np.append(counted_probabilities, counted_chance_of_pick(i))
+
+counted_probabilities = pd.DataFrame(counted_probabilities, columns=['probability'])
+
+fig, ax = plt.subplots(figsize=(15, 8))
+ax.plot(counted_probabilities.index, 
+        counted_probabilities['probability'], '-', label='Probability')
+plt.title('Probability of Being Picked (Total Picked/Unpicked)')
+plt.savefig('..\\Figures\\Probability_Of_Unit_Picked_Over_Time.png')
+plt.show()
