@@ -23,13 +23,13 @@ sql = DatabaseManagerSQL()
 # Histogram date between tests, ignoring Batch='1', Chip='1', because that seems to be
 # a recurring test unit that leads to lots of negative values 
 query1 = "SELECT (floor(DateDiff(d, C.Timestamp, Laser.MaxDate) / 10.00) * 10) as DeltaDate, COUNT(*) as Count \
-  FROM OrtelTE.dbo.ChirpSpecTrumData AS C \
-    INNER JOIN (  \
-      SELECT Batch, Chip, max(Timestamp) as MaxDate  \
-      FROM OrtelTe.dbo.ChirpSpecTrumData \
-      GROUP BY Batch, Chip  \
-    ) AS CMaxDate  \
-      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  \
+	FROM OrtelTE.dbo.ChirpSpecTrumData AS C \
+		INNER JOIN (  \
+			SELECT Batch, Chip, max(Timestamp) as MaxDate  \
+			FROM OrtelTe.dbo.ChirpSpecTrumData \
+			GROUP BY Batch, Chip  \
+		) AS CMaxDate  \
+			ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  \
 	INNER JOIN (\
 		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate\
 		FROM OrtelTE.dbo.ModuleDistortion\
@@ -43,13 +43,13 @@ query1 = "SELECT (floor(DateDiff(d, C.Timestamp, Laser.MaxDate) / 10.00) * 10) a
 # Histogram date between chip test date and today's date where chip is not found
 # in laser sql table, i.e. chip has not been selected
 query2 = "SELECT (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10) as DeltaDate, COUNT(*) as Count \
-  FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
-    INNER JOIN (   \
-      SELECT Batch, Chip, max(Timestamp) as MaxDate   \
-      FROM OrtelTe.dbo.ChirpSpecTrumData  \
-      GROUP BY Batch, Chip   \
-    ) AS CMaxDate   \
-      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
+	FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
+		INNER JOIN (   \
+			SELECT Batch, Chip, max(Timestamp) as MaxDate   \
+			FROM OrtelTe.dbo.ChirpSpecTrumData  \
+			GROUP BY Batch, Chip   \
+		) AS CMaxDate   \
+			ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
 	LEFT JOIN ( \
 		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate \
 		FROM OrtelTE.dbo.ModuleDistortion \
@@ -59,7 +59,7 @@ query2 = "SELECT (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 1
 	WHERE C.Batch != '1' AND C.Chip != '1' AND Laser.Device_SN IS NULL \
 	GROUP BY (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10) \
 	ORDER BY (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10)"
-  
+	
 #%%
 # Histogram for matched lasers
 res1 = sql.ExecQuery(query1)
@@ -73,13 +73,13 @@ df2 = pd.DataFrame(data=res2, columns=['DeltaDateBin', 'Count'])
 #%%
 # Apparently we can just get all the delta dates like whatever
 query3 = "SELECT DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) as DeltaDate \
-  FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
-    INNER JOIN (   \
-      SELECT Batch, Chip, max(Timestamp) as MaxDate   \
-      FROM OrtelTe.dbo.ChirpSpecTrumData  \
-      GROUP BY Batch, Chip   \
-    ) AS CMaxDate   \
-      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
+	FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
+		INNER JOIN (   \
+			SELECT Batch, Chip, max(Timestamp) as MaxDate   \
+			FROM OrtelTe.dbo.ChirpSpecTrumData  \
+			GROUP BY Batch, Chip   \
+		) AS CMaxDate   \
+			ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
 	LEFT JOIN ( \
 		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate \
 		FROM OrtelTE.dbo.ModuleDistortion \
@@ -87,15 +87,15 @@ query3 = "SELECT DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) as DeltaDate \
 	) AS Laser \
 	ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo \
 	WHERE C.Batch != '1' AND C.Chip != '1' AND Laser.Device_SN IS NULL "
-  
+	
 query4 = "SELECT DateDiff(d, C.Timestamp, Laser.MaxDate) as DeltaDate \
-  FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
-    INNER JOIN (   \
-      SELECT Batch, Chip, max(Timestamp) as MaxDate   \
-      FROM OrtelTe.dbo.ChirpSpecTrumData  \
-      GROUP BY Batch, Chip   \
-    ) AS CMaxDate   \
-      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
+	FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
+		INNER JOIN (   \
+			SELECT Batch, Chip, max(Timestamp) as MaxDate   \
+			FROM OrtelTe.dbo.ChirpSpecTrumData  \
+			GROUP BY Batch, Chip   \
+		) AS CMaxDate   \
+			ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
 	INNER JOIN ( \
 		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate \
 		FROM OrtelTE.dbo.ModuleDistortion \
@@ -155,35 +155,100 @@ ax[1].plot(X_plot.loc[:, 0], unmatched_probabilities, '-', label='Gaussian Kerne
 plt.show()
 
 def chance_of_pick( day ):
-  '''
-  Pass a number of days unit has been in inventory
-  Returns expected chance of being picked as decimal according to kde
-  Intuitively seems incorrect, as at 600 days probability ~25%
-  '''
-  m = matched_probabilities[:day].sum() * matched.count()
-  un = unmatched_probabilities[:day].sum() * unmatched.count()
-  probability = m / (m + un)
-  return probability
+	'''
+	Pass a number of days unit has been in inventory
+	Returns expected chance of being picked as decimal according to kde
+	Intuitively seems incorrect, as at 600 days probability ~25%
+	'''
+	m = matched_probabilities[:day].sum() * matched.count()
+	un = unmatched_probabilities[:day].sum() * unmatched.count()
+	probability = m / (m + un)
+	return probability
 
 #%%
 def counted_chance_of_pick( day ):
-  '''
-  Calculate chance of picked by num units beyond matched/unmatched
-  '''
-  greater_matched = matched[matched['DeltaDate'] > day].count()
-  greater_unmatched = unmatched[unmatched['DeltaDate'] > day].count()
-  probability = greater_matched / ( greater_matched + greater_unmatched )
-  return probability
+	'''
+	Calculate chance of picked by num units beyond matched/unmatched
+	'''
+	greater_matched = matched[matched['DeltaDate'] > day].count()
+	greater_unmatched = unmatched[unmatched['DeltaDate'] > day].count()
+	probability = greater_matched / ( greater_matched + greater_unmatched )
+	return probability
 
 counted_probabilities = np.array([])
 for i in range(601):
-  counted_probabilities = np.append(counted_probabilities, counted_chance_of_pick(i))
+	counted_probabilities = np.append(counted_probabilities, counted_chance_of_pick(i))
 
 counted_probabilities = pd.DataFrame(counted_probabilities, columns=['probability'])
 
 fig, ax = plt.subplots(figsize=(15, 8))
 ax.plot(counted_probabilities.index, 
-        counted_probabilities['probability'], '-', label='Probability')
+				counted_probabilities['probability'], '-', label='Probability')
 plt.title('Probability of Being Picked (Total Picked/Unpicked)')
 plt.savefig('..\\Figures\\Probability_Of_Unit_Picked_Over_Time.png')
 plt.show()
+
+
+#%%
+# --------------------------
+# LM COB Correlations
+# --------------------------
+query1 = 'SELECT TOP 10000 C.RecordId, C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp,  \
+	DateDiff(d, C.Timestamp, Laser.MaxDate) as DeltaDate, PredictChannel,  \
+	TestPwr Chip_TestPwr, LISlope Chip_LISlope, LIIth Chip_LIIth, PartNo Chip_PartNo,  \
+	PeakWL Chip_PeakWL, DetuneAmpl Chip_DetuneAmpl, C.SMSR Chip_SMSR, \
+	C.Chirp Chip_Chirp, ModCurrent Chip_ModCurrent, ModulationFreq Chip_ModulationFreq,  \
+	RFpk Chip_RFpk, AlignPwr Chip_AlignPwr, Laser.RFClipping Laser_RFClipping, Laser.Ith Laser_Ith,  \
+	Laser.Slopeff Laser_Slopeff, Laser.Temperature Laser_Temperature, Laser.Chirp Laser_Chirp,  \
+	Laser.WaveLen Laser_WaveLen, Laser.SMSR Laser_SMSR, Laser.Ibb Laser_Ibb,  \
+	Laser.PowerIbb Laser_PowerIbb, Laser.Iop Laser_Iop, Laser.Pop Laser_Pop,  \
+	Laser.CSO_Chirp Laser_CSO_Chirp \
+FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
+	INNER JOIN (   \
+		SELECT Batch, Chip, max(Timestamp) as MaxDate   \
+		FROM OrtelTe.dbo.ChirpSpecTrumData  \
+		GROUP BY Batch, Chip   \
+	) AS CMaxDate   \
+		ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
+INNER JOIN ( \
+	SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate, RFClipping, Ith, Slopeff, Temperature, Chirp, WaveLen, SMSR,  \
+Ibb, PowerIbb, Iop, Pop, CSO_Chirp \
+	FROM OrtelTE.dbo.ModuleDistortion \
+	GROUP BY Device_SN, BatchNo, ChipNo, RFClipping, Ith, Slopeff, Temperature, Chirp, WaveLen, SMSR,  \
+Ibb, PowerIbb, Iop, Pop, CSO_Chirp \
+) AS Laser \
+ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo \
+{} \
+ORDER BY C.RecordId DESC'
+
+# first loop
+res1 = sql.ExecQuery(query1.format("WHERE C.Chip != '1' AND C.Batch != '1'".format(last_id)))
+df1 = pd.DataFrame( res1, columns= [ 'RecordId', 'Timestamp', 'Batch', 'Chip', 
+'LaserTimestamp', 'DeltaDate', 'PredictChannel', 'Chip_TestPwr', 
+'Chip_LISlope', 'Chip_LIIth', 'Chip_PartNo', 'Chip_PeakWL', 'Chip_DetuneAmpl', 'Chip_SMSR',
+'Chip_Chirp', 'Chip_ModCurrent', 'Chip_ModulationFreq', 'Chip_RFpk', 'Chip_AlignPwr', 
+'Laser_RFClipping', 'Laser_Ith', 'Laser_Slopeff', 'Laser_Temperature', 'Laser_Chirp', 
+'Laser_WaveLen', 'Laser_SMSR', 'Laser_Ibb', 'Laser_PowerIbb', 'Laser_Iop', 'Laser_Pop', 
+'Laser_CSO_Chirp' ])
+last_id = res1[-1][0]
+
+looping = True
+
+while(looping):
+	res1 = sql.ExecQuery(query1.format("WHERE C.RecordId < {} AND C.Chip != '1' AND C.Batch != '1'".format(last_id)))
+	df_res = pd.DataFrame( res1, columns= [ 'RecordId', 'Timestamp', 'Batch', 'Chip', 
+	'LaserTimestamp', 'DeltaDate', 'PredictChannel', 'Chip_TestPwr', 
+	'Chip_LISlope', 'Chip_LIIth', 'Chip_PartNo', 'Chip_PeakWL', 'Chip_DetuneAmpl', 'Chip_SMSR',
+	'Chip_Chirp', 'Chip_ModCurrent', 'Chip_ModulationFreq', 'Chip_RFpk', 'Chip_AlignPwr', 
+	'Laser_RFClipping', 'Laser_Ith', 'Laser_Slopeff', 'Laser_Temperature', 'Laser_Chirp', 
+	'Laser_WaveLen', 'Laser_SMSR', 'Laser_Ibb', 'Laser_PowerIbb', 'Laser_Iop', 'Laser_Pop', 
+	'Laser_CSO_Chirp' ])
+	# get last record
+	if(len(res1) < 1):
+		looping = False
+		print('Completed')
+		break
+	last_id = res1[-1][0]
+	df1 = df1.append(df_res, ignore_index = True)
+	df1.to_csv('temp.csv')	
+	print('Loop completed, results found: {}'.format(len(res1)))
