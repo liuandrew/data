@@ -252,3 +252,126 @@ while(looping):
 	df1 = df1.append(df_res, ignore_index = True)
 	df1.to_csv('temp.csv')	
 	print('Loop completed, results found: {}'.format(len(res1)))
+#%%
+query2 = 'SELECT TOP 10000 C.RecordId, C.Timestamp, C.Batch, C.Chip, \
+	(floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10) as DeltaDate, PredictChannel,  \
+	TestPwr Chip_TestPwr, LISlope Chip_LISlope, LIIth Chip_LIIth, PartNo Chip_PartNo, \
+	PeakWL Chip_PeakWL, DetuneAmpl Chip_DetuneAmpl, C.SMSR Chip_SMSR, \
+	C.Chirp Chip_Chirp, ModCurrent Chip_ModCurrent, ModulationFreq Chip_ModulationFreq,  \
+	RFpk Chip_RFpk, AlignPwr Chip_AlignPwr \
+FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
+	INNER JOIN (  \
+		SELECT Batch, Chip, max(Timestamp) as MaxDate   \
+		FROM OrtelTe.dbo.ChirpSpecTrumData  \
+		GROUP BY Batch, Chip   \
+	) AS CMaxDate   \
+		ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
+LEFT JOIN ( \
+	SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate \
+	FROM OrtelTE.dbo.ModuleDistortion \
+	GROUP BY Device_SN, BatchNo, ChipNo ) AS Laser \
+ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo \
+{} \
+ORDER BY C.RecordId DESC'
+
+# first loop
+res2 = sql.ExecQuery(query2.format("WHERE C.Chip != '1' AND C.Batch != '1' AND Laser.Device_SN IS NULL"))
+df2 = pd.DataFrame( res2, columns= [ 'RecordId', 'Timestamp', 'Batch', 'Chip', 
+'DeltaDate', 'PredictChannel', 'Chip_TestPwr', 
+'Chip_LISlope', 'Chip_LIIth', 'Chip_PartNo', 'Chip_PeakWL', 'Chip_DetuneAmpl', 'Chip_SMSR',
+'Chip_Chirp', 'Chip_ModCurrent', 'Chip_ModulationFreq', 'Chip_RFpk', 'Chip_AlignPwr' ])
+last_id = res2[-1][0]
+
+looping = True
+
+while(looping):
+	res2 = sql.ExecQuery(query2.format("WHERE C.RecordId < {} AND C.Chip != '1' AND C.Batch != '1' \
+		AND Laser.Device_SN IS NULL".format(last_id)))
+	df_res = pd.DataFrame( res2, columns= [ 'RecordId', 'Timestamp', 'Batch', 'Chip', 
+	'DeltaDate', 'PredictChannel', 'Chip_TestPwr', 
+	'Chip_LISlope', 'Chip_LIIth', 'Chip_PartNo', 'Chip_PeakWL', 'Chip_DetuneAmpl', 'Chip_SMSR',
+	'Chip_Chirp', 'Chip_ModCurrent', 'Chip_ModulationFreq', 'Chip_RFpk', 'Chip_AlignPwr' ])
+	# get last record
+	if(len(res2) < 1):
+		looping = False
+		print('Completed')
+		break
+	last_id = res2[-1][0]
+	df2 = df2.append(df_res, ignore_index = True)
+	df2.to_csv('temp.csv')	
+	print('Loop completed, results found: {}'.format(len(res2)))
+
+#%%
+# Prepare linked and unlinked cob test data
+df1 = pd.read_csv('..\\Data\\COB_LM_Linked_Data_2.csv')
+df1 = df1.drop('Unnamed: 0', axis=1)
+df1 = df1.drop_duplicates('RecordId')
+df1 = df1.dropna()
+
+identifier_cols = [ 'RecordId', 'Batch', 'Chip' ]
+date_cols = [ 'LaserTimestamp', 'DeltaDate', 'Timestamp' ]
+channel_col = [ 'PredictChannel' ]
+chip_cols = [ 'Chip_TestPwr', 
+	'Chip_LISlope', 'Chip_LIIth', 'Chip_PeakWL', 'Chip_SMSR',
+	'Chip_Chirp', 'Chip_ModCurrent', 'Chip_ModulationFreq', 'Chip_RFpk', 
+	'Chip_AlignPwr' ]
+not_norm_chip_cols = [ 'Chip_DetuneAmpl', 'Chip_PartNo' ]
+laser_cols = [ 'Laser_RFClipping', 'Laser_Ith', 'Laser_Slopeff', 'Laser_Temperature', 'Laser_Chirp', 
+	'Laser_WaveLen', 'Laser_SMSR', 'Laser_Ibb', 'Laser_PowerIbb', 'Laser_Iop', 'Laser_Pop', 
+	'Laser_CSO_Chirp' ]
+
+def drop_outliers( df, column ):
+	'''
+	Remove outliers based on simple calculation of normal distribution and 
+	5 std dev
+	'''
+	percentiles = np.percentile( df[ column ], [25, 50, 75] )
+	mu = percentiles[1]
+	sig = 0.74 * ( percentiles[2] - percentiles[0] )
+	df = df[ df[ column ] > (mu - 5 * sig) ] 
+	df = df[ df[ column ] < (mu + 5 * sig) ] 
+	return df
+
+for col in chip_cols:
+    print( col )
+    df1 = drop_outliers( df1, col )
+    
+df2 = pd.read_csv('..\\Data\\COB_Non_Linked_Data.csv')
+df2 = df2.drop('Unnamed: 0', axis=1)
+df2 = df2.drop_duplicates('RecordId')
+df2 = df2.dropna()
+for col in chip_cols:
+    print( col )
+    df2 = drop_outliers( df2, col )
+
+#%%
+# -------------------
+# Naive Bayes Classifier
+# -------------------
+# Run prepare df1 and df2 linked and unlinked cob test data
+from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.cross_validation import cross_val_score
+
+X = pd.DataFrame( df1.loc[ :, chip_cols ] )
+X = X.append( df2.loc[ :, chip_cols ], ignore_index = True )
+y = pd.Series( np.ones( df1.shape[0] ) )
+y = y.append( pd.Series( np.zeros( df2.shape[0] ) ), ignore_index = True )
+
+# shuffle rows
+X[ 'label' ] = y
+X = X.sample( frac = 1 ).reset_index( drop = True )
+y = X[ 'label' ]
+X = X.drop( 'label', axis=1 )
+
+''' X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1)
+
+model = GaussianNB()
+model.fit( X_train, y_train )
+accuracy_score( y_test, model.predict( X_test ) ) '''
+
+# cross-val score
+model = GaussianNB()
+model.fit( X, y )
+cross_val_score( model, X, y, cv=5 )
