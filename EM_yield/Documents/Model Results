@@ -1,0 +1,11 @@
+Model Results:
+1. COB test data vs. selection
+
+GaussianNB: 0.687
+SVC: 0.7458
+RandomForest: 0.8089
+
+RandomForest importances: PeakWL (this may be because we're looking at WL to find appropriate chips to use), Chirp, SMSR, ModulationFreq (not sure what this is)
+
+Each of the above classifiers seems like additional data (even beyond ~2% of data being used, i.e. ~8k examples) is not improving scores - need to find either more features are a more complex model
+

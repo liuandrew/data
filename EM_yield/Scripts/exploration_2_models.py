@@ -16,6 +16,11 @@ import os.path
 from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
 
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import cross_val_score
+
+from sklearn.externals import joblib
 # Connect to SQL
 sql = DatabaseManagerSQL()
 
@@ -302,7 +307,10 @@ while(looping):
 	print('Loop completed, results found: {}'.format(len(res2)))
 
 #%%
+# ------------------------------------------
 # Prepare linked and unlinked cob test data
+# ------------------------------------------
+    
 df1 = pd.read_csv('..\\Data\\COB_LM_Linked_Data_2.csv')
 df1 = df1.drop('Unnamed: 0', axis=1)
 df1 = df1.drop_duplicates('RecordId')
@@ -344,16 +352,6 @@ for col in chip_cols:
     print( col )
     df2 = drop_outliers( df2, col )
 
-#%%
-# -------------------
-# Naive Bayes Classifier
-# -------------------
-# Run prepare df1 and df2 linked and unlinked cob test data
-from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.cross_validation import cross_val_score
-
 X = pd.DataFrame( df1.loc[ :, chip_cols ] )
 X = X.append( df2.loc[ :, chip_cols ], ignore_index = True )
 y = pd.Series( np.ones( df1.shape[0] ) )
@@ -371,7 +369,75 @@ model = GaussianNB()
 model.fit( X_train, y_train )
 accuracy_score( y_test, model.predict( X_test ) ) '''
 
+#%%
+# -------------------
+# Naive Bayes Classifier
+# -------------------
+# Run prepare df1 and df2 linked and unlinked cob test data
+from sklearn.naive_bayes import GaussianNB
+
 # cross-val score
-model = GaussianNB()
-model.fit( X, y )
-cross_val_score( model, X, y, cv=5 )
+nb_clf = GaussianNB()
+nb_clf.fit( X, y )
+cross_val_score( nb_clf, X, y, cv=5 )
+
+#%%
+from sklearn.model_selection import learning_curve
+
+fig = plt.figure(figsize=(12, 6))
+plt.plot(N, np.mean(train_lc, 1), color='blue')
+plt.plot(N, np.mean(val_lc, 1), color='red')
+plt.set_ylim(0, 1)
+
+#%%
+# --------------------
+# SVM
+# --------------------
+from sklearn.svm import SVC
+svm_clf = SVC(kernel='rbf')
+
+# only train on ~30000 examples
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.95)
+svm_clf.fit(X_train, y_train)
+#N, train_lc, val_lc = learning_curve(clf, X, y, train_sizes=np.linspace(0.1, 1, 10))
+
+#fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+#ax[0].plot(N, np.mean(train_lc, 1), color='blue')
+#ax[0].plot(N, np.mean(val_lc, 1), color='red')
+#ax[0].hlines(np.mean([train_lc[-1], val_lc[-1]]), N[0], N[-1], color='grey',
+#  linestyle='dashed')
+#ax[0].set_xlim(N[0], N[-1])
+#ax[0].set_ylim(0, 1)
+#ax[0].set_xlabel('training size')
+#ax[0].set_ylabel('score')
+#ax[0].title('learning curve for SVC')
+#ax[0].legend(loc='best')
+
+X_test2 = X_test.iloc[:10000, :]
+y_test2 = y_test.iloc[:10000]
+accuracy_score(y_test2, svm_clf.predict(X_test2))
+
+#%%
+#-------------------
+# Random Forest
+#-------------------
+from sklearn.ensemble import RandomForestClassifier
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.80)
+
+rf_clf = RandomForestClassifier(n_estimators = 200)
+
+%time rf_clf.fit(X_train, y_train)
+
+X_test2 = X_test.iloc[:50000, :]
+y_test2 = y_test.iloc[:50000]
+%time accuracy_score(y_test, rf_clf.predict(X_test))
+
+#%%
+# dumps and loads
+joblib.dump(nb_clf, '..\\Models\\naivebayes_cob_selection.pkl')
+joblib.dump(svm_clf, '..\\Models\\svm_cob_selection.pkl')
+joblib.dump(rf_clf, '..\\Models\\randomforest_cob_selection.pkl')
+
+nb_clf = joblib.load(nb_clf, '..\\Models\\naivebayes_cob_selection.pkl')
+svm_clf = joblib.load(svm_clf, '..\\Models\\svm_cob_selection.pkl')
+rf_clf = joblib.load(rf_clf, '..\\Models\\randomforest_cob_selection.pkl')
