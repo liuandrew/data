@@ -434,6 +434,8 @@ y_test2 = y_test.iloc[:50000]
 
 #%%
 # dumps and loads
+# randomforest not saved to github because classifier is too large and 
+# is quick to train
 joblib.dump(nb_clf, '..\\Models\\naivebayes_cob_selection.pkl')
 joblib.dump(svm_clf, '..\\Models\\svm_cob_selection.pkl')
 joblib.dump(rf_clf, '..\\Models\\randomforest_cob_selection.pkl')

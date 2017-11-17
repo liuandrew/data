@@ -3,7 +3,7 @@ Model Results:
 
 GaussianNB: 0.687
 SVC: 0.7458
-RandomForest: 0.8089
+RandomForest: 0.8130
 
 RandomForest importances: PeakWL (this may be because we're looking at WL to find appropriate chips to use), Chirp, SMSR, ModulationFreq (not sure what this is)
 
