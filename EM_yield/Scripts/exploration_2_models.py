@@ -31,7 +31,10 @@ from sklearn.model_selection import learning_curve
 from sklearn.decomposition import PCA
 
 from sklearn.linear_model import LinearRegression
-
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+from sklearn.ensemble import RandomForestRegressor
 # Connect to SQL
 sql = DatabaseManagerSQL()
 
@@ -509,9 +512,17 @@ compare = pd.DataFrame(data=[v2-v1, v3-v1, v1], columns=X_no_wl.columns, index=[
 # Regressive Models
 # ------------------
 # Baseline model
-ln_rg = LinearRegression()
+#ln_rg = LinearRegression()
+#poly_model = make_pipeline(PolynomialFeatures(3),
+#                           Ridge())
+rf_rg = RandomForestRegressor()
 X = df1[ chip_cols ]
+
 for target_col in laser_cols:
   y = df1[ target_col ]
-  cv_score = cross_val_score(ln_rg, X, y, cv=5)
+  X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.65)
+  cv_score = cross_val_score(rf_rg, X, y)
+  rf_rg.fit(X_train, y_train)
   print('Target {0} score: {1}'.format(target_col, cv_score.mean()))
+  tempdf = pd.DataFrame(rf_rg.feature_importances_.T, index=X.columns, columns=['Value'])
+  print(tempdf.sort_values('Value', ascending=False))
