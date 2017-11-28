@@ -11,6 +11,7 @@ from automation1.utilities import *
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os.path
 
 from sklearn.neighbors import KernelDensity
@@ -21,6 +22,16 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import cross_val_score
 
 from sklearn.externals import joblib
+
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import learning_curve
+
+from sklearn.decomposition import PCA
+
+from sklearn.linear_model import LinearRegression
+
 # Connect to SQL
 sql = DatabaseManagerSQL()
 
@@ -309,6 +320,7 @@ while(looping):
 #%%
 # ------------------------------------------
 # Prepare linked and unlinked cob test data
+# USED FOR ALL MODELS! RUN EVERY TIME
 # ------------------------------------------
     
 df1 = pd.read_csv('..\\Data\\COB_LM_Linked_Data_2.csv')
@@ -351,17 +363,23 @@ df2 = df2.dropna()
 for col in chip_cols:
     print( col )
     df2 = drop_outliers( df2, col )
-
-X = pd.DataFrame( df1.loc[ :, chip_cols ] )
-X = X.append( df2.loc[ :, chip_cols ], ignore_index = True )
+    
+X = pd.DataFrame( df1.loc[ :, chip_cols + channel_col + ['DeltaDate'] ] )
+X = X.append( df2.loc[ :, chip_cols + channel_col + ['DeltaDate'] ], ignore_index = True )
 y = pd.Series( np.ones( df1.shape[0] ) )
 y = y.append( pd.Series( np.zeros( df2.shape[0] ) ), ignore_index = True )
 
 # shuffle rows
 X[ 'label' ] = y
 X = X.sample( frac = 1 ).reset_index( drop = True )
+# ---- Only take COB with DeltaDate < 100
+X = X[X['DeltaDate'] < 100]
+# ----
 y = X[ 'label' ]
 X = X.drop( 'label', axis=1 )
+channels = X['PredictChannel']
+X = X.drop( 'PredictChannel', axis=1 )
+X = X.drop( 'Chip_PeakWL', axis=1 )
 
 ''' X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1)
 
@@ -374,7 +392,6 @@ accuracy_score( y_test, model.predict( X_test ) ) '''
 # Naive Bayes Classifier
 # -------------------
 # Run prepare df1 and df2 linked and unlinked cob test data
-from sklearn.naive_bayes import GaussianNB
 
 # cross-val score
 nb_clf = GaussianNB()
@@ -382,7 +399,6 @@ nb_clf.fit( X, y )
 cross_val_score( nb_clf, X, y, cv=5 )
 
 #%%
-from sklearn.model_selection import learning_curve
 
 fig = plt.figure(figsize=(12, 6))
 plt.plot(N, np.mean(train_lc, 1), color='blue')
@@ -393,12 +409,11 @@ plt.set_ylim(0, 1)
 # --------------------
 # SVM
 # --------------------
-from sklearn.svm import SVC
 svm_clf = SVC(kernel='rbf')
 
 # only train on ~30000 examples
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.95)
-svm_clf.fit(X_train, y_train)
+%time svm_clf.fit(X_train, y_train)
 #N, train_lc, val_lc = learning_curve(clf, X, y, train_sizes=np.linspace(0.1, 1, 10))
 
 #fig, ax = plt.subplots(1, 1, figsize=(12, 6))
@@ -421,15 +436,14 @@ accuracy_score(y_test2, svm_clf.predict(X_test2))
 #-------------------
 # Random Forest
 #-------------------
-from sklearn.ensemble import RandomForestClassifier
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.80)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 rf_clf = RandomForestClassifier(n_estimators = 200)
 
 %time rf_clf.fit(X_train, y_train)
 
-X_test2 = X_test.iloc[:50000, :]
-y_test2 = y_test.iloc[:50000]
+#X_test2 = X_test.iloc[:50000, :]
+#y_test2 = y_test.iloc[:50000]
 %time accuracy_score(y_test, rf_clf.predict(X_test))
 
 #%%
@@ -443,3 +457,61 @@ joblib.dump(rf_clf, '..\\Models\\randomforest_cob_selection.pkl')
 nb_clf = joblib.load(nb_clf, '..\\Models\\naivebayes_cob_selection.pkl')
 svm_clf = joblib.load(svm_clf, '..\\Models\\svm_cob_selection.pkl')
 rf_clf = joblib.load(rf_clf, '..\\Models\\randomforest_cob_selection.pkl')
+
+#%%
+# ----------------
+# PCA
+# ----------------
+
+pca = PCA(n_components = 2)
+
+# !PCA WITHOUT Wavelength
+
+X_no_wl = X.drop('Chip_PeakWL', axis=1)
+
+X_pca = pca.fit_transform(X_no_wl)
+X_pca_vis = pd.DataFrame(columns = ['PCA1', 'PCA2'])
+# Visualize channels 20-30
+for channel in np.arange(20, 30, 1):
+  tempdf = pd.DataFrame(X_pca[channels == channel], columns=['PCA1', 'PCA2'])
+  #  limit to 500 rows
+  tempdf = tempdf[:30]
+  tempdf['Channel'] = np.full(tempdf.shape[0], channel)
+  X_pca_vis = X_pca_vis.append(tempdf, ignore_index=True)
+X_pca_vis['Channel'] = X_pca_vis['Channel'].astype(int)
+
+sns.lmplot('PCA1', 'PCA2', X_pca_vis, hue='Channel', palette='Pastel1', fit_reg=False, size=10)
+sns.plt.title('PCA Visualization of Channels 20-29')
+#sns.plt.savefig('..\\Figures\\PCA_Visualization_20_29_No_WL')
+
+# Visualize channels 18-64
+X_pca_vis = pd.DataFrame(columns = ['PCA1', 'PCA2'])
+for channel in np.arange(18, 65, 1):
+  tempdf = pd.DataFrame(X_pca[channels == channel], columns=['PCA1', 'PCA2'])
+  #  limit to 500 rows
+  tempdf = tempdf[:30]
+  tempdf['Channel'] = np.full(tempdf.shape[0], channel)
+  X_pca_vis = X_pca_vis.append(tempdf, ignore_index=True)
+X_pca_vis['Channel'] = X_pca_vis['Channel'].astype(int)
+
+sns.lmplot('PCA1', 'PCA2', X_pca_vis, hue='Channel', palette='Pastel1', fit_reg=False, size=10)
+sns.plt.title('PCA Visualization of Channels 18-64')
+#sns.plt.savefig('..\\Figures\\PCA_Visualization_18_64')
+
+# determine factor influence of PCA
+v1 = pca.inverse_transform([0, 0])
+v2 = pca.inverse_transform([1, 0])
+v3 = pca.inverse_transform([0, 1])
+compare = pd.DataFrame(data=[v2-v1, v3-v1, v1], columns=X_no_wl.columns, index=['PCA1', 'PCA2', 'Baseline'])
+
+#%%
+# ------------------
+# Regressive Models
+# ------------------
+# Baseline model
+ln_rg = LinearRegression()
+X = df1[ chip_cols ]
+for target_col in laser_cols:
+  y = df1[ target_col ]
+  cv_score = cross_val_score(ln_rg, X, y, cv=5)
+  print('Target {0} score: {1}'.format(target_col, cv_score.mean()))
