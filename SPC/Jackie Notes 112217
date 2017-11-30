@@ -1,0 +1,24 @@
+test results are mostly just product data, not really spc specific data
+group test results by wafer
+	check how many other units have been tested on wafer
+	< 30 units monitor by product id
+		less than 30, not enough data to determine health of wafer
+	> 30 units monitor by wafer
+
+	GUI should tell what chart is displaying
+
+LM SPC is on-going. Uses units on the station passing or failing specs
+to determine station health, rather than standardized SPC units
+
+	- might have to consider underlying distributions for units, rather than
+	relying on just the 30 units to formulate the distribution. With a guideline
+	or general structure for a wafer to fit, the predictive capabilities may
+	be much greater
+
+	* would like to see the current test software and process to figure out
+	where SPC software could fit in
+		-> clearly it would go after a unit test
+		-> thus need to know the kind of test data we get and the factors
+		we calculate against
+
+

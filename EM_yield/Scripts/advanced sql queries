@@ -20,21 +20,21 @@ SELECT TOP 1 C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp, (Las
 
 
 # Get delta date between tests
-	SELECT TOP 1 C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp, DateDiff(d, C.Timestamp, Laser.MaxDate) as DeltaDate
-  FROM OrtelTE.dbo.ChirpSpecTrumData AS C 
-    INNER JOIN (  
-      SELECT Batch, Chip, max(Timestamp) as MaxDate  
-      FROM OrtelTe.dbo.ChirpSpecTrumData 
-      GROUP BY Batch, Chip  
-    ) AS CMaxDate  
-      ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  
-	INNER JOIN (
-		SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate
-		FROM OrtelTE.dbo.ModuleDistortion
-		GROUP BY Device_SN, BatchNo, ChipNo
-	) AS Laser
-	ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo
-	ORDER BY C.RecordId DESC
+SELECT TOP 1 C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp, DateDiff(d, C.Timestamp, Laser.MaxDate) as DeltaDate
+FROM OrtelTE.dbo.ChirpSpecTrumData AS C 
+  INNER JOIN (  
+    SELECT Batch, Chip, max(Timestamp) as MaxDate  
+    FROM OrtelTe.dbo.ChirpSpecTrumData 
+    GROUP BY Batch, Chip  
+  ) AS CMaxDate  
+    ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  
+INNER JOIN (
+	SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate
+	FROM OrtelTE.dbo.ModuleDistortion
+	GROUP BY Device_SN, BatchNo, ChipNo
+) AS Laser
+ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo
+ORDER BY C.RecordId DESC
 
 # Histogram date between tests, ignoring Batch='1', Chip='1', because that seems to be
 # a recurring test unit that leads to lots of negative values 
@@ -75,3 +75,67 @@ SELECT (floor(DateDiff(d, C.Timestamp, Laser.MaxDate) / 10.00) * 10) as DeltaDat
 	WHERE C.Batch != '1' AND C.Chip != '1' AND Laser.Device_SN IS NULL
 	GROUP BY (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10)
 	ORDER BY (floor(DateDiff(d, C.Timestamp, CURRENT_TIMESTAMP) / 10.00) * 10)
+
+
+# --------------------
+# COB LM Data Correlations with Delta Date
+# --------------------
+
+# General data for chips that have been matched to laser module
+
+SELECT TOP 1 C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp, DateDiff(d, C.Timestamp, Laser.MaxDate) as DeltaDate,
+	PredictChannel, TestPwr, LISlope, LIIth, PartNo, PeakWL, DetuneAmpl, SMSR,
+	Chirp, ModCurrent, ModulationFreq, RFpk, AlignPwr
+FROM OrtelTE.dbo.ChirpSpecTrumData AS C 
+  INNER JOIN (  
+    SELECT Batch, Chip, max(Timestamp) as MaxDate  
+    FROM OrtelTe.dbo.ChirpSpecTrumData 
+    GROUP BY Batch, Chip  
+  ) AS CMaxDate  
+    ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate  
+INNER JOIN (
+	SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate
+	FROM OrtelTE.dbo.ModuleDistortion
+	GROUP BY Device_SN, BatchNo, ChipNo
+) AS Laser
+ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo
+ORDER BY C.RecordId DESC
+
+
+# Capturing LM and chip data together, ideally looking at PredictChannel to 
+# divide up results
+
+'SELECT TOP 1 C.Timestamp, C.Batch, C.Chip, Laser.MaxDate as LaserTimestamp,  \
+	DateDiff(d, C.Timestamp, Laser.MaxDate) as DeltaDate, PredictChannel,  \
+	TestPwr Chip_TestPwr, LISlope Chip_LISlope, LIIth Chip_LIIth, PartNo Chip_PartNo,  \
+	PeakWL Chip_PeakWL, DetuneAmpl Chip_DetuneAmpl, C.SMSR Chip_SMSR, \
+	C.Chirp Chip_Chirp, ModCurrent Chip_ModCurrent, ModulationFreq Chip_ModulationFreq,  \
+	RFpk Chip_RFpk, AlignPwr Chip_AlignPwr, Laser.RFClipping Laser_RFClipping, Laser.Ith Laser_Ith,  \
+	Laser.Slopeff Laser_Slopeff, Laser.Temperature Laser_Temperature, Laser.Chirp Laser_Chirp,  \
+	Laser.WaveLen Laser_WaveLen, Laser.SMSR Laser_SMSR, Laser.Ibb Laser_Ibb,  \
+	Laser.PowerIbb Laser_PowerIbb, Laser.Iop Laser_Iop, Laser.Pop Laser_Pop,  \
+	Laser.CSO_Chirp Laser_CSO_Chirp \
+FROM OrtelTE.dbo.ChirpSpecTrumData AS C  \
+  INNER JOIN (   \
+    SELECT Batch, Chip, max(Timestamp) as MaxDate   \
+    FROM OrtelTe.dbo.ChirpSpecTrumData  \
+    GROUP BY Batch, Chip   \
+  ) AS CMaxDate   \
+    ON C.Batch = CMaxDate.Batch AND C.Chip = CMaxDate.Chip AND C.Timestamp = CMaxDate.MaxDate   \
+INNER JOIN ( \
+	SELECT Device_SN, BatchNo, ChipNo, max(TEST_DT) as MaxDate, RFClipping, Ith, Slopeff, Temperature, Chirp, WaveLen, SMSR,  \
+Ibb, PowerIbb, Iop, Pop, CSO_Chirp \
+	FROM OrtelTE.dbo.ModuleDistortion \
+	GROUP BY Device_SN, BatchNo, ChipNo, RFClipping, Ith, Slopeff, Temperature, Chirp, WaveLen, SMSR,  \
+Ibb, PowerIbb, Iop, Pop, CSO_Chirp \
+) AS Laser \
+ON C.Batch = Laser.BatchNo AND C.Chip = Laser.ChipNo \
+ORDER BY C.RecordId DESC'
+
+
+[ 'Timestamp', 'Batch', 'Chip', 'LaserTimestamp', 'DeltaDate', 'PredictChannel', 'Chip_TestPwr', 
+'Chip_LISlope', 'Chip_LIIth', 'Chip_PartNo', 'Chip_PeakWL', 'Chip_DetuneAmpl', 'Chip_SMSR',
+'Chip_Chirp', 'Chip_ModCurrent', 'Chip_ModulationFreq', 'Chip_RFpk', 'Chip_AlignPwr', 
+'Laser_RFClipping', 'Laser_Ith', 'Laser_Slopeff', 'Laser_Temperature', 'Laser_Chirp', 
+'Laser_WaveLen', 'Laser_SMSR', 'Laser_Ibb', 'Laser_PowerIbb', 'Laser_Iop', 'Laser_Pop', 
+'Laser_CSO_Chirp' ]

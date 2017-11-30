@@ -526,3 +526,18 @@ for target_col in laser_cols:
   print('Target {0} score: {1}'.format(target_col, cv_score.mean()))
   tempdf = pd.DataFrame(rf_rg.feature_importances_.T, index=X.columns, columns=['Value'])
   print(tempdf.sort_values('Value', ascending=False))
+
+#%%
+# -----------------
+# Time Series (order history)
+# -----------------
+
+df = pd.read_csv('..\\Data\\Laser Module Consumption Monthly.csv', index_col='Month',
+                 parse_dates = True)
+df_ave = df.copy()
+df_ave[ 'Total' ] = df_ave.mean( axis=1 )
+
+norms = pd.Series()
+for col in df_ave.columns:
+    norms = norms.append( pd.Series(df_ave[col].mean(), index=[col]) )
+
